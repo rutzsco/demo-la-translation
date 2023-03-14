@@ -1,0 +1,88 @@
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "actions": {
+      "Response": {
+        "inputs": {
+          "statusCode": 200
+        },
+        "kind": "http",
+        "runAfter": {
+          "Upload_blob_to_storage_container": [
+            "Succeeded"
+          ]
+        },
+        "type": "Response"
+      },
+      "Text_to_Speech": {
+        "inputs": {
+          "body": "<speak version='1.0' xml:lang='en-US'><voice xml:lang='@{triggerBody()?['language_code']}' xml:gender='@{triggerBody()?['gender']}'\n    name='@{triggerBody()?['voice']}'><lang xml:lang='@{triggerBody()?['language_code']}'>@{triggerBody()?['translated_text']}</lang></voice></speak>",
+          "headers": {
+            "Content-Type": "application/ssml+xml",
+            "Ocp-Apim-Subscription-Key": "@parameters('speach-key')",
+            "X-Microsoft-OutputFormat": "audio-48khz-192kbitrate-mono-mp3"
+          },
+          "method": "POST",
+          "uri": "https://@{parameters('speach-region')}.tts.speech.microsoft.com/cognitiveservices/v1"
+        },
+        "runAfter": {},
+        "type": "Http"
+      },
+      "Upload_blob_to_storage_container": {
+        "inputs": {
+          "parameters": {
+            "blobName": "@concat(triggerBody()?['dirname'], '/', triggerBody()?['filename'])",
+            "containerName": "audiodownload",
+            "content": "@base64ToBinary(body('Text_to_Speech')?['$content'])",
+            "overrideIfExists": "True"
+          },
+          "serviceProviderConfiguration": {
+            "connectionName": "AzureBlob",
+            "operationId": "uploadBlob",
+            "serviceProviderId": "/serviceProviders/AzureBlob"
+          }
+        },
+        "runAfter": {
+          "Text_to_Speech": [
+            "Succeeded"
+          ]
+        },
+        "type": "ServiceProvider"
+      }
+    },
+    "contentVersion": "1.0.0.0",
+    "outputs": {},
+    "triggers": {
+      "manual": {
+        "inputs": {
+          "schema": {
+            "properties": {
+              "dirname": {
+                "type": "string"
+              },
+              "filename": {
+                "type": "string"
+              },
+              "gender": {
+                "type": "string"
+              },
+              "language_code": {
+                "type": "string"
+              },
+              "translated_text": {
+                "type": "string"
+              },
+              "voice": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "kind": "Http",
+        "type": "Request"
+      }
+    }
+  },
+  "kind": "Stateful"
+}

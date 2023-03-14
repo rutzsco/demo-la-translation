@@ -1,0 +1,315 @@
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "actions": {
+      "Check_if_Excel_upload": {
+        "actions": {
+          "Condition": {
+            "actions": {
+              "For_Each_Language": {
+                "actions": {
+                  "Submit_Excel_Translation_Workflow": {
+                    "inputs": {
+                      "body": {
+                        "filename": "@{variables('filename')}",
+                        "language_code": "@{items('For_Each_Language')}"
+                      },
+                      "host": {
+                        "workflow": {
+                          "id": "excel-translation"
+                        }
+                      }
+                    },
+                    "runAfter": {},
+                    "type": "Workflow"
+                  }
+                },
+                "foreach": "@variables('languages')",
+                "runAfter": {},
+                "type": "Foreach"
+              }
+            },
+            "expression": {
+              "or": [
+                {
+                  "endsWith": [
+                    "@toLower(variables('filename'))",
+                    ".xlsx"
+                  ]
+                },
+                {
+                  "endsWith": [
+                    "@toLower(variables('filename'))",
+                    ".xls"
+                  ]
+                }
+              ]
+            },
+            "runAfter": {},
+            "type": "If"
+          }
+        },
+        "expression": {
+          "and": [
+            {
+              "contains": [
+                "@variables('blob_path')",
+                "/excelupload/"
+              ]
+            }
+          ]
+        },
+        "runAfter": {
+          "Check_if_text_upload": [
+            "Succeeded"
+          ]
+        },
+        "type": "If"
+      },
+      "Check_if_audio_upload": {
+        "actions": {
+          "Check_if_WAV": {
+            "actions": {
+              "For_Each_Audio_Language": {
+                "actions": {
+                  "Call_Audio_Translation_Workflow": {
+                    "inputs": {
+                      "body": {
+                        "blob_uri": "@{variables('blob_path')}",
+                        "default": "@{items('For_Each_Audio_Language')?['default_voice']}",
+                        "dirname": "@{variables('dir_name')}",
+                        "female_one": "@{items('For_Each_Audio_Language')?['female_one']}",
+                        "female_two": "@{items('For_Each_Audio_Language')?['female_two']}",
+                        "language_code": "@{items('For_Each_Audio_Language')?['language_code']}",
+                        "male_one": "@{items('For_Each_Audio_Language')?['male_one']}",
+                        "male_two": "@{items('For_Each_Audio_Language')?['male_two']}"
+                      },
+                      "host": {
+                        "workflow": {
+                          "id": "audio-translation"
+                        }
+                      }
+                    },
+                    "runAfter": {},
+                    "type": "Workflow"
+                  }
+                },
+                "foreach": "@variables('audio_language_list')",
+                "runAfter": {},
+                "type": "Foreach"
+              }
+            },
+            "else": {
+              "actions": {
+                "Check_if_MP3": {
+                  "actions": {
+                    "Call_an_Azure_function": {
+                      "inputs": {
+                        "body": {
+                          "filename": "@{variables('filename')}"
+                        },
+                        "function": {
+                          "connectionName": "azureFunctionOperation"
+                        },
+                        "method": "POST"
+                      },
+                      "runAfter": {},
+                      "type": "Function"
+                    }
+                  },
+                  "expression": {
+                    "and": [
+                      {
+                        "endsWith": [
+                          "@toLower(variables('blob_path'))",
+                          "mp3"
+                        ]
+                      }
+                    ]
+                  },
+                  "runAfter": {},
+                  "type": "If"
+                }
+              }
+            },
+            "expression": {
+              "and": [
+                {
+                  "endsWith": [
+                    "@toLower(variables('blob_path'))",
+                    "wav"
+                  ]
+                }
+              ]
+            },
+            "runAfter": {},
+            "type": "If"
+          }
+        },
+        "expression": {
+          "and": [
+            {
+              "contains": [
+                "@variables('blob_path')",
+                "/audioupload/"
+              ]
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_Audio_Language_List": [
+            "Succeeded"
+          ]
+        },
+        "type": "If"
+      },
+      "Check_if_text_upload": {
+        "actions": {},
+        "expression": {
+          "and": [
+            {
+              "contains": [
+                "@variables('blob_path')",
+                "/textupload/"
+              ]
+            }
+          ]
+        },
+        "runAfter": {
+          "Check_if_audio_upload": [
+            "Succeeded"
+          ]
+        },
+        "type": "If"
+      },
+      "Get_Blob_Path": {
+        "inputs": {
+          "variables": [
+            {
+              "name": "blob_path",
+              "type": "string",
+              "value": "@{triggerBody()?['data']?['url']}"
+            }
+          ]
+        },
+        "runAfter": {},
+        "type": "InitializeVariable"
+      },
+      "Get_Filename": {
+        "inputs": {
+          "variables": [
+            {
+              "name": "filename",
+              "type": "string",
+              "value": "@{last(split(variables('blob_path'), '/'))}"
+            }
+          ]
+        },
+        "runAfter": {
+          "Get_Blob_Path": [
+            "Succeeded"
+          ]
+        },
+        "type": "InitializeVariable"
+      },
+      "Get_Filename_Without_Extension": {
+        "inputs": {
+          "variables": [
+            {
+              "name": "dir_name",
+              "type": "string",
+              "value": "@{split(variables('filename'), '.')[0]}"
+            }
+          ]
+        },
+        "runAfter": {
+          "Get_Filename": [
+            "Succeeded"
+          ]
+        },
+        "type": "InitializeVariable"
+      },
+      "Initialize_Audio_Language_List": {
+        "inputs": {
+          "variables": [
+            {
+              "name": "audio_language_list",
+              "type": "array",
+              "value": [
+                {
+                  "default_voice": "en-US-JennyMultilingualNeural",
+                  "female_one": "es-MX-BeatrizNeural",
+                  "female_two": "es-MX-RenataNeural",
+                  "language_code": "es-MX",
+                  "male_one": "es-MX-CecilioNeural",
+                  "male_two": "es-MX-JorgeNeural"
+                }
+              ]
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_Language_List": [
+            "Succeeded"
+          ]
+        },
+        "type": "InitializeVariable"
+      },
+      "Initialize_Language_List": {
+        "inputs": {
+          "variables": [
+            {
+              "name": "languages",
+              "type": "array",
+              "value": [
+                "es"
+              ]
+            }
+          ]
+        },
+        "runAfter": {
+          "Get_Filename_Without_Extension": [
+            "Succeeded"
+          ]
+        },
+        "type": "InitializeVariable"
+      }
+    },
+    "contentVersion": "1.0.0.0",
+    "outputs": {},
+    "triggers": {
+      "When_a_resource_event_occurs": {
+        "inputs": {
+          "body": {
+            "properties": {
+              "destination": {
+                "endpointType": "webhook",
+                "properties": {
+                  "endpointUrl": "@{listCallbackUrl()}"
+                }
+              },
+              "filter": {
+                "includedEventTypes": [
+                  "Microsoft.Storage.BlobCreated"
+                ]
+              },
+              "topic": "/subscriptions/@parameters('azureSubscriptionId')/resourceGroups/@parameters('azureSubscriptionId')/providers/Microsoft.Storage/storageAccounts/@parameters('blobStorageAccountName')"
+            }
+          },
+          "host": {
+            "connection": {
+              "referenceName": "azureeventgrid"
+            }
+          },
+          "path": "/subscriptions/@parameters('azureSubscriptionId')/providers/@{encodeURIComponent('Microsoft.Storage.StorageAccounts')}/resource/eventSubscriptions",
+          "queries": {
+            "x-ms-api-version": "2017-09-15-preview"
+          }
+        },
+        "splitOn": "@triggerBody()",
+        "type": "ApiConnectionWebhook"
+      }
+    }
+  },
+  "kind": "Stateful"
+}

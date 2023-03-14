@@ -1,0 +1,57 @@
+# ----------------------------------------------------------------------------------------------------
+# Template to deploy a pre-built logic app standard to a Function App
+# ----------------------------------------------------------------------------------------------------
+parameters: 
+- name: variableGroupName
+  default:  'myVariableGroup'
+- name: environmentName
+  default:  'DEV'
+- name: azureSubscription
+  default: ''
+- name: triggerFrequency
+  default: ''
+
+# ----------------------------------------------------------------------------------------------------
+jobs:
+- deployment: Deploy${{ parameters.environmentName }}Function
+  displayName: Initialize ${{ parameters.environmentName }} Deploy Function
+  environment: ${{ parameters.environmentName }}
+
+  variables:
+    - group: ${{ parameters.variableGroupName }}
+    - name: environmentNameLower
+      value: ${{ lower(parameters.environmentName) }}
+    - name: dockerCustomImageName
+      value: '$(dockerRegistryServerUrl)/$(dockerImageRepository):$(Build.BuildNumber)'
+
+  strategy:
+    runOnce:
+      deploy:
+        steps:
+        - bash: |
+            appPrefixLower=$(echo "$(appPrefix)" | tr '[:upper:]' '[:lower:]')
+            echo "##vso[task.setvariable variable=appPrefixLower]$appPrefixLower"
+
+            functionAppName=$(echo "$(appPrefix)-$(longAppName)-fn-$(environmentNameLower)" | tr '[:upper:]' '[:lower:]')
+            echo "##vso[task.setvariable variable=functionAppName]$functionAppName"
+          displayName: 'Create Variables'
+
+        - bash: |
+            echo "functionAppName=$(functionAppName)"
+            echo "azureSubscription=$(azureSubscription)"
+            echo "resourceGroupName=$(resourceGroupName)"
+            echo "dockerRegistryServerUrl=$(dockerRegistryServerUrl)"
+            echo "dockerCustomImageName=$(dockerCustomImageName)"
+            echo "Pipeline.Workspace=$(Pipeline.Workspace)"
+            tree $(Pipeline.Workspace)
+          displayName: 'Display Variables'
+          continueOnError: true
+
+        - task: AzureCLI@2
+          displayName: 'Deploy Function App'
+          inputs:
+            azureSubscription: $(azureSubscription)
+            scriptType: 'bash'
+            scriptLocation: inlineScript
+            inlineScript: |
+              az functionapp config container set --name $(functionAppName) --resource-group $(resourceGroupName)  --docker-custom-image-name $(dockerCustomImageName)

@@ -1,0 +1,42 @@
+{
+  "translation-key": {
+    "type": "String",
+    "value": "@appsetting('TRANSLATION_SERVICE_KEY')"
+  },
+  "speach-key": {
+    "type": "String",
+    "value": "@appsetting('SPEACH_SERVICE_KEY')"
+  },
+  "speach-region": {
+    "type": "String",
+    "value": "@appsetting('TRANSLATION_SERVICE_REGION')"
+  },
+  "translation-region": {
+    "type": "String",
+    "value": "@appsetting('TRANSLATION_SERVICE_REGION')"
+  },
+  "azureSubscriptionId": {
+    "type": "String",
+    "value": "@appsetting('WORKFLOWS_SUBSCRIPTION_ID')"
+  },
+  "azureResourceGroup": {
+    "type": "String",
+    "value": "@appsetting('WORKFLOWS_RESOURCE_GROUP_NAME')"
+  },
+  "blobStorageAccountName": {
+    "type": "String",
+    "value": "@appsetting('BLOB_STORAGE_CONNECTION_STRING')"
+  },
+  "azureEventGridConnectionName": {
+    "type": "String",
+    "value": "@appsetting('AZURE_EVENT_GRID_CONNECTION_NAME')"
+  },
+  "excelConnectionName": {
+    "type": "String",
+    "value": "@appsetting('EXCEL_CONNECTION_NAME')"
+  },
+  "oneDriveConnectionName": {
+    "type": "String",
+    "value": "@appsetting('ONE_DRIVE_CONNECTION_NAME')"
+  }
+}

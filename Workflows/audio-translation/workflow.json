@@ -1,0 +1,443 @@
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "actions": {
+      "Create_Input_SAS": {
+        "inputs": {
+          "parameters": {
+            "blobName": "@variables('filename')",
+            "containerName": "audioupload"
+          },
+          "serviceProviderConfiguration": {
+            "connectionName": "AzureBlob",
+            "operationId": "getBlobSASUri",
+            "serviceProviderId": "/serviceProviders/AzureBlob"
+          }
+        },
+        "runAfter": {
+          "Get_Output_Filename": [
+            "Succeeded"
+          ]
+        },
+        "type": "ServiceProvider"
+      },
+      "Default_-_TTS": {
+        "inputs": {
+          "body": {
+            "dirname": "@{triggerBody()?['dirname']}",
+            "filename": "@{replace(variables('output_filename'), '.', '_Default.')}",
+            "gender": "Female",
+            "language_code": "@{triggerBody()?['language_code']}",
+            "translated_text": "@{variables('translated_text')}",
+            "voice": "@{triggerBody()?['default']}"
+          },
+          "host": {
+            "workflow": {
+              "id": "text-to-speech"
+            }
+          }
+        },
+        "runAfter": {
+          "Female_Two_-_TTS": [
+            "Succeeded"
+          ]
+        },
+        "type": "Workflow"
+      },
+      "Female_One_-_TTS": {
+        "inputs": {
+          "body": {
+            "dirname": "@{triggerBody()?['dirname']}",
+            "filename": "@{replace(variables('output_filename'), '.', '_FemaleOne.')}",
+            "gender": "Female",
+            "language_code": "@{triggerBody()?['language_code']}",
+            "translated_text": "@{variables('translated_text')}",
+            "voice": "@{triggerBody()?['female_one']}"
+          },
+          "host": {
+            "workflow": {
+              "id": "text-to-speech"
+            }
+          }
+        },
+        "runAfter": {
+          "Male_Two_-_TTS": [
+            "Succeeded"
+          ]
+        },
+        "type": "Workflow"
+      },
+      "Female_Two_-_TTS": {
+        "inputs": {
+          "body": {
+            "dirname": "@{triggerBody()?['dirname']}",
+            "filename": "@{replace(variables('output_filename'), '.', '_FemaleTwo.')}",
+            "gender": "Female",
+            "language_code": "@{triggerBody()?['language_code']}",
+            "translated_text": "@{variables('translated_text')}",
+            "voice": "@{triggerBody()?['female_two']}"
+          },
+          "host": {
+            "workflow": {
+              "id": "text-to-speech"
+            }
+          }
+        },
+        "runAfter": {
+          "Female_One_-_TTS": [
+            "Succeeded"
+          ]
+        },
+        "type": "Workflow"
+      },
+      "For_each": {
+        "actions": {
+          "Condition": {
+            "actions": {
+              "Get_Transcription_Results": {
+                "inputs": {
+                  "headers": {
+                    "Content-Type": "application/json",
+                    "Ocp-Apim-Subscription-Key": "@parameters('translation-key')"
+                  },
+                  "method": "GET",
+                  "uri": "@{items('For_each')['links']['contentUrl']}"
+                },
+                "runAfter": {},
+                "type": "Http"
+              },
+              "Update_Transcribed_Text": {
+                "inputs": {
+                  "name": "transcribed_text",
+                  "value": "@{body('Get_Transcription_Results')?['combinedRecognizedPhrases']?[0]?['display']}"
+                },
+                "runAfter": {
+                  "Get_Transcription_Results": [
+                    "Succeeded"
+                  ]
+                },
+                "type": "SetVariable"
+              }
+            },
+            "expression": {
+              "and": [
+                {
+                  "equals": [
+                    "@items('For_Each')?['kind']",
+                    "Transcription"
+                  ]
+                }
+              ]
+            },
+            "runAfter": {},
+            "type": "If"
+          }
+        },
+        "foreach": "@body('Get_SST_Results')?['values']",
+        "runAfter": {
+          "Get_SST_Results": [
+            "Succeeded"
+          ]
+        },
+        "type": "Foreach"
+      },
+      "Get_Filename": {
+        "inputs": {
+          "variables": [
+            {
+              "name": "filename",
+              "type": "string",
+              "value": "@{last(split(string(triggerBody()?['blob_uri']), '/'))}"
+            }
+          ]
+        },
+        "runAfter": {},
+        "type": "InitializeVariable"
+      },
+      "Get_Output_Filename": {
+        "inputs": {
+          "variables": [
+            {
+              "name": "output_filename",
+              "type": "string",
+              "value": "@{replace(variables('filename'), '.WAV', concat('_', triggerBody()?['language_code'], '.WAV'))}"
+            }
+          ]
+        },
+        "runAfter": {
+          "Get_Filename": [
+            "Succeeded"
+          ]
+        },
+        "type": "InitializeVariable"
+      },
+      "Get_SST_Results": {
+        "inputs": {
+          "headers": {
+            "Content-Type": "application/json",
+            "Ocp-Apim-Subscription-Key": "@parameters('speach-key')"
+          },
+          "method": "GET",
+          "uri": "@{body('Get_Status')['links']['files']}"
+        },
+        "runAfter": {
+          "Until_Speech-to-Text_Completed": [
+            "Succeeded"
+          ]
+        },
+        "type": "Http"
+      },
+      "Initialize_Status_Var": {
+        "inputs": {
+          "variables": [
+            {
+              "name": "speech_to_text_status_var",
+              "type": "string",
+              "value": "Running"
+            }
+          ]
+        },
+        "runAfter": {
+          "Submit_Speech-to-Text": [
+            "Succeeded"
+          ]
+        },
+        "type": "InitializeVariable"
+      },
+      "Initialize_Transcribed_Text": {
+        "inputs": {
+          "variables": [
+            {
+              "name": "transcribed_text",
+              "type": "string"
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_Status_Var": [
+            "Succeeded"
+          ]
+        },
+        "type": "InitializeVariable"
+      },
+      "Initialize_Translated_Text": {
+        "inputs": {
+          "variables": [
+            {
+              "name": "translated_text",
+              "type": "string"
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_Transcribed_Text": [
+            "Succeeded"
+          ]
+        },
+        "type": "InitializeVariable"
+      },
+      "Male_One_-_TTS": {
+        "inputs": {
+          "body": {
+            "dirname": "@{triggerBody()?['dirname']}",
+            "filename": "@{replace(variables('output_filename'), '.', '_MaleOne.')}",
+            "gender": "Male",
+            "language_code": "@{triggerBody()?['language_code']}",
+            "translated_text": "@{variables('translated_text')}",
+            "voice": "@{triggerBody()?['male_one']}"
+          },
+          "host": {
+            "workflow": {
+              "id": "text-to-speech"
+            }
+          }
+        },
+        "runAfter": {
+          "Update_Translated_Text": [
+            "Succeeded"
+          ]
+        },
+        "type": "Workflow"
+      },
+      "Male_Two_-_TTS": {
+        "inputs": {
+          "body": {
+            "dirname": "@{triggerBody()?['dirname']}",
+            "filename": "@{replace(variables('output_filename'), '.', '_MaleTwo.')}",
+            "gender": "Male",
+            "language_code": "@{triggerBody()?['language_code']}",
+            "translated_text": "@{variables('translated_text')}",
+            "voice": "@{triggerBody()?['male_two']}"
+          },
+          "host": {
+            "workflow": {
+              "id": "text-to-speech"
+            }
+          }
+        },
+        "runAfter": {
+          "Male_One_-_TTS": [
+            "Succeeded"
+          ]
+        },
+        "type": "Workflow"
+      },
+      "Response": {
+        "inputs": {
+          "statusCode": 200
+        },
+        "kind": "http",
+        "runAfter": {
+          "Default_-_TTS": [
+            "Succeeded"
+          ]
+        },
+        "type": "Response"
+      },
+      "Submit_Speech-to-Text": {
+        "inputs": {
+          "body": {
+            "contentUrls": [
+              "@body('Create_Input_SAS')?['blobUri']"
+            ],
+            "displayName": "Transcription",
+            "locale": "en-US",
+            "properties": {
+              "wordLevelTimestampsEnabled": "True"
+            }
+          },
+          "headers": {
+            "Content-Type": "application/json",
+            "Ocp-Apim-Subscription-Key": "@parameters('speach-key')"
+          },
+          "method": "POST",
+          "uri": "https://@{parameters('speach-region')}.api.cognitive.microsoft.com/speechtotext/v3.1/transcriptions"
+        },
+        "runAfter": {
+          "Create_Input_SAS": [
+            "Succeeded"
+          ]
+        },
+        "type": "Http"
+      },
+      "Translate_Text": {
+        "inputs": {
+          "body": [
+            {
+              "text": "@{variables('transcribed_text')}"
+            }
+          ],
+          "headers": {
+            "Content-Type": "application/json",
+            "Ocp-Apim-Subscription-Key": "@parameters('translation-key')",
+            "Ocp-Apim-Subscription-Region": "@parameters('translation-region')"
+          },
+          "method": "POST",
+          "queries": {
+            "api-version": "3.0",
+            "from": "en",
+            "to": "@triggerBody()?['language_code']"
+          },
+          "uri": "https://api.cognitive.microsofttranslator.com/translate"
+        },
+        "runAfter": {
+          "For_each": [
+            "Succeeded"
+          ]
+        },
+        "type": "Http"
+      },
+      "Until_Speech-to-Text_Completed": {
+        "actions": {
+          "Get_Status": {
+            "inputs": {
+              "headers": {
+                "Content-Type": "application/json",
+                "Ocp-Apim-Subscription-Key": "@parameters('speach-key')"
+              },
+              "method": "GET",
+              "uri": "@{body('Submit_Speech-to-Text')?['self']}"
+            },
+            "runAfter": {},
+            "type": "Http"
+          },
+          "Update_Status": {
+            "inputs": {
+              "name": "speech_to_text_status_var",
+              "value": "@{body('Get_Status')?['status']}"
+            },
+            "runAfter": {
+              "Get_Status": [
+                "Succeeded"
+              ]
+            },
+            "type": "SetVariable"
+          }
+        },
+        "expression": "@equals(variables('speech_to_text_status_var'), 'Succeeded')",
+        "limit": {
+          "count": 60,
+          "timeout": "PT1H"
+        },
+        "runAfter": {
+          "Initialize_Translated_Text": [
+            "Succeeded"
+          ]
+        },
+        "type": "Until"
+      },
+      "Update_Translated_Text": {
+        "inputs": {
+          "name": "translated_text",
+          "value": "@{body('Translate_Text')?[0]?['translations']?[0]?['text']}"
+        },
+        "runAfter": {
+          "Translate_Text": [
+            "Succeeded"
+          ]
+        },
+        "type": "SetVariable"
+      }
+    },
+    "contentVersion": "1.0.0.0",
+    "outputs": {},
+    "triggers": {
+      "manual": {
+        "inputs": {
+          "schema": {
+            "properties": {
+              "blob_uri": {
+                "type": "string"
+              },
+              "default": {
+                "type": "string"
+              },
+              "dirname": {
+                "type": "string"
+              },
+              "female_one": {
+                "type": "string"
+              },
+              "female_two": {
+                "type": "string"
+              },
+              "language_code": {
+                "type": "string"
+              },
+              "male_one": {
+                "type": "string"
+              },
+              "male_two": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "kind": "Http",
+        "type": "Request"
+      }
+    }
+  },
+  "kind": "Stateful"
+}

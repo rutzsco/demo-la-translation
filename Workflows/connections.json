@@ -1,0 +1,41 @@
+{
+  "managedApiConnections": {
+    "azureeventgrid": {
+      "api": {
+        "id": "/subscriptions/@appsetting('WORKFLOWS_SUBSCRIPTION_ID')/providers/Microsoft.Web/locations/@appsetting('WORKFLOWS_LOCATION_NAME')/managedApis/@appsetting('EVENT_GRID_STORAGE_CONNECTION_NAME')"
+      },
+      "connection": {
+        "id": "/subscriptions/@appsetting('WORKFLOWS_SUBSCRIPTION_ID')/resourceGroups/@appsetting('WORKFLOWS_RESOURCE_GROUP_NAME')/providers/Microsoft.Web/connections/@appsetting('EVENT_GRID_STORAGE_CONNECTION_NAME')"
+      },
+      "connectionRuntimeUrl": "@appsetting('EVENT_GRID_CONNECTION_RUNTIMEURL')",
+      "authentication": {
+        "type": "ManagedServiceIdentity"
+      }
+    }
+  },
+  "functionConnections": {
+    "azureFunctionOperation": {
+      "function": {
+        "id": "/subscriptions/@appsetting('FUNCTIONS_SUBSCRIPTION_ID')/resourceGroups/@appsetting('FUNCTIONS_RESOURCE_GROUP_NAME')/providers/Microsoft.Web/sites/@appsetting('FUNCTIONS_APP_NAME')/functions/MP3ToWAV"
+      },
+      "triggerUrl": "@appsetting('FUNCTIONS_APP_URL')",
+      "authentication": {
+        "type": "QueryString",
+        "name": "Code",
+        "value": "@appsetting('FUNCTIONS_APP_KEY')"
+      },
+      "displayName": "AzureFunctionConnections"
+    }
+  },
+  "serviceProviderConnections": {
+    "AzureBlob": {
+      "parameterValues": {
+        "connectionString": "@appsetting('BLOB_STORAGE_CONNECTION_STRING')"
+      },
+      "serviceProvider": {
+        "id": "/serviceProviders/AzureBlob"
+      },
+      "displayName": "BlobStorageConnection"
+    }
+  }
+}

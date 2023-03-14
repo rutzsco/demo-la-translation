@@ -1,0 +1,52 @@
+# ----------------------------------------------------------------------------------------------------
+# Template to build logic app standard artifacts
+# ----------------------------------------------------------------------------------------------------
+parameters: 
+- name: variableGroupName
+  default:  'myVariableGroup'
+- name: environmentName
+  default:  'DEV'
+
+# ------------------------------------------------------------------------------------------------------------------------
+jobs:
+- deployment: Build${{ parameters.environmentName }}Application
+  displayName: Initialize Build App - ${{ parameters.environmentName }} 
+  environment: ${{ parameters.environmentName }}
+
+- job: Build${{ parameters.environmentName }}Function
+  displayName: Build Application - ${{ parameters.environmentName }}
+
+  variables:
+    - group: ${{ parameters.variableGroupName }}
+    - name: artifactFolderName
+      value: 'App'
+    - name: tag
+      value: '$(Build.BuildNumber)'
+    - name: dockerfilePath
+      value: '$(Build.SourcesDirectory)/Services/AzureFunctionWAVConversion/Dockerfile'
+      
+  steps:
+  - task: CmdLine@2
+    inputs:
+      script: |
+        echo "solution=$(solution)"
+        echo "artifactFolderName=$(artifactFolderName)"
+        echo "Directory of System.DefaultWorkingDirectory:"
+        tree $(System.DefaultWorkingDirectory)
+    displayName: 'Display Variables'
+    continueOnError: true
+
+  - task: Docker@2
+    displayName: Build and push an image to container registry
+    inputs:
+      command: buildAndPush
+      repository: $(dockerImageRepository)
+      dockerfile: $(dockerfilePath)
+      containerRegistry: $(dockerRegistryServiceConnection)
+      tags: $(tag)
+    
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: 'Infrastructure'
+      artifact: 'Infrastructure'
+      publishLocation: 'pipeline'

@@ -1,0 +1,19 @@
+name: $(date:yyyy).$(date:MM).$(date:dd)$(rev:.r)
+pool:
+  vmImage: 'ubuntu-latest'
+
+# ----------------------------------------------------------------------------------------------------
+trigger:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+      - Services/*
+
+# ----------------------------------------------------------------------------------------------------
+stages:
+- template: pipes/function-pipeline-template.yml
+  parameters:
+    variableGroupName: 'LogicAppTransationDemo'
+    environments: ['DEMO']
