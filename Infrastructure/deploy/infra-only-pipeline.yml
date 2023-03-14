@@ -21,5 +21,5 @@ trigger:
 stages:
 - template: pipes/infra-only-pipeline-template.yml
   parameters:
-    variableGroupName: 'LogicAppTransationDemo'
+    variableGroupName: 'DemoLATranslation'
     environments: ['DEMO']  # ['DEV','PROD'] ['DEV','QA'] or ['DEV','QA','PROD']
