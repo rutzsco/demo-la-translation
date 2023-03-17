@@ -29,14 +29,6 @@
   },
   "azureEventGridConnectionName": {
     "type": "String",
-    "value": "@appsetting('AZURE_EVENT_GRID_CONNECTION_NAME')"
-  },
-  "excelConnectionName": {
-    "type": "String",
-    "value": "@appsetting('EXCEL_CONNECTION_NAME')"
-  },
-  "oneDriveConnectionName": {
-    "type": "String",
-    "value": "@appsetting('ONE_DRIVE_CONNECTION_NAME')"
+    "value": "@appsetting('EVENT_GRID_CONNECTION_NAME')"
   }
 }
